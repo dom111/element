@@ -76,11 +76,23 @@ export const onEach:
 
 export const t = (content: string): Text => document.createTextNode(content);
 
-export class Element {
-  #element: HTMLElement;
+export class Element<T extends HTMLElement = HTMLElement> {
+  #element: T;
 
-  constructor(selector: string, ...childNodes: Node[]) {
-    this.#element = h(selector, ...childNodes);
+  constructor(element: T) {
+    this.#element = element;
+  }
+
+  static fromSelector(selector: string, ...childNodes: Node[]): Element {
+    return new Element(h(selector, ...childNodes));
+  }
+
+  static fromString(html: string): Element {
+    const container = document.createElement('div');
+
+    container.innerHTML = html;
+
+    return new Element(container.firstElementChild as HTMLElement);
   }
 
   addClass(...classes: string[]): void {
@@ -97,7 +109,7 @@ export class Element {
     });
   }
 
-  element(): HTMLElement {
+  element(): T {
     return this.#element;
   }
 
