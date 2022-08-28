@@ -2,7 +2,7 @@ version: '3'
 
 services:
   test:
-    image: typescript-library-test
+    image: element-test
     build:
       context: docker/test
     volumes:

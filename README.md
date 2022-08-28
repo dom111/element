@@ -1,3 +1,3 @@
-# typescript-library
+# element
 
-TypeScript library/app template including functional and unit tests
+A simple Element wrapper to build UIs in "vanilla" JS
