@@ -1,0 +1,41 @@
+{
+  "name": "typescript-library",
+  "version": "0.1.0",
+  "description": "TypeScript library/app template including functional and unit tests",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build:prettier:write && npm run build:esbuild",
+    "build:esbuild": "node ./esbuild.js",
+    "build:esbuild:watch": "node ./esbuild.js watch",
+    "build:prettier:check": "prettier -c .",
+    "build:prettier:write": "prettier -w .",
+    "build:watch": "npm run build:esbuild:watch",
+    "test": "npm run test:unit && npm run test:functional",
+    "test:functional": "jest -c jest.config.functional.ts",
+    "test:unit": "jest -c jest.config.unit.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dom111/typescript-library.git"
+  },
+  "author": "Dom Hastings <dom111@users.noreply.github.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dom111/typescript-library/issues"
+  },
+  "homepage": "https://github.com/dom111/typescript-library#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/expect-puppeteer": "^4.4.7",
+    "@types/jest": "^27.4.1",
+    "@types/jest-environment-puppeteer": "^5.0.0",
+    "@types/puppeteer": "^5.4.5",
+    "esbuild": "^0.14.10",
+    "esbuild-sass-plugin": "^2.0.0",
+    "jest": "^27.5.1",
+    "jest-puppeteer": "^6.1.0",
+    "prettier": "^2.5.1",
+    "ts-jest": "^27.1.4",
+    "ts-node": "^10.7.0"
+  }
+}
