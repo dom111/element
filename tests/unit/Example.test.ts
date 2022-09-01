@@ -10,11 +10,14 @@ describe('Example', () => {
         }
       >('<div></div>');
 
-      element.on('foo', (event) => {
-        const [a, b, c] = event.detail;
+      element.on('foo', ({ detail: [a, b, c] }) => {
+        const s: string[] = [a],
+          n: number[] = [b],
+          e: Node[] = [c];
+      });
 
-        // Error on unsupported types
-        document.body.append(a, b, c);
+      element.on('keydown', (event) => {
+        event.key;
       });
     });
   });

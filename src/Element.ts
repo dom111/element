@@ -1,15 +1,32 @@
 import { parse } from 'css-what';
 
-export const emit = (element: EventTarget, event: Event): boolean =>
-  element.dispatchEvent(event);
+export type CustomEventMap = {
+  [key: string]: any[];
+};
+type Listener<
+  M,
+  K extends string = string
+> = K extends keyof GlobalEventHandlersEventMap
+  ? (event: GlobalEventHandlersEventMap[K]) => any
+  : K extends keyof M
+  ? (event: CustomEvent<M[K]>) => any
+  : EventListener;
+type ListenerKeys<T> = keyof T extends string ? keyof T : never;
+type ListenerOptions = boolean | AddEventListenerOptions;
+
+export const addClass = (element: HTMLElement, ...classes: string[]) =>
+  element.classList.add(...classes);
+
+export const emit = (target: EventTarget, event: Event): boolean =>
+  target.dispatchEvent(event);
 
 export const emitCustom = <T extends any[] = any[]>(
-  element: EventTarget,
+  target: EventTarget,
   eventName: string,
   ...params: T
 ): boolean =>
   emit(
-    element,
+    target,
     new CustomEvent<T>(eventName, {
       detail: params,
     })
@@ -17,7 +34,7 @@ export const emitCustom = <T extends any[] = any[]>(
 
 export const empty = (element: HTMLElement): void => {
   while (element.hasChildNodes()) {
-    element.firstChild.remove();
+    element.firstChild?.remove();
   }
 };
 
@@ -26,11 +43,7 @@ export const h = <T extends HTMLElement = HTMLElement>(
   ...childNodes: (Node | Element)[]
 ): T => {
   const [element] = parse(selector).map((selectors) =>
-    selectors.reduce((element: HTMLElement | null, details) => {
-      if (element === null && details.type !== 'tag') {
-        element = document.createElement('div');
-      }
-
+    selectors.reduce((element: HTMLElement, details) => {
       if (details.type === 'tag') {
         return document.createElement(details.name);
       }
@@ -44,7 +57,7 @@ export const h = <T extends HTMLElement = HTMLElement>(
       }
 
       return element;
-    }, null)
+    }, document.createElement('div'))
   );
 
   childNodes.forEach((childNode) => {
@@ -58,51 +71,74 @@ export const h = <T extends HTMLElement = HTMLElement>(
   return element as T;
 };
 
-export const on:
-  | (<K extends keyof GlobalEventHandlersEventMap>(
-      target: EventTarget,
-      event: K,
-      listener: (event: GlobalEventHandlersEventMap[K]) => void,
-      options?: boolean | AddEventListenerOptions
-    ) => any)
-  | ((
-      element: EventTarget,
-      event: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions
-    ) => any) = (target, event, handler, options): void =>
-  target.addEventListener(event, handler, options);
+export const hasClass = (element: HTMLElement, className: string): boolean =>
+  element.classList.contains(className);
 
-export const once:
-  | (<K extends keyof GlobalEventHandlersEventMap>(
-      target: EventTarget,
-      event: K,
-      listener: (event: GlobalEventHandlersEventMap[K]) => void,
-      options?: boolean | AddEventListenerOptions
-    ) => any)
-  | ((
-      element: EventTarget,
-      event: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions
-    ) => any) = (target, event, handler, options): void =>
-  on(event, handler, { ...options, once: true });
+export const off = <
+  M extends CustomEventMap = CustomEventMap,
+  K extends
+    | string
+    | ListenerKeys<GlobalEventHandlersEventMap>
+    | ListenerKeys<M> = string
+>(
+  target: EventTarget,
+  event: K,
+  listener: Listener<M, K>,
+  options: ListenerOptions = {}
+): void =>
+  target.removeEventListener(
+    event as string,
+    listener as EventListener,
+    options
+  );
 
-export const onEach:
-  | (<K extends keyof GlobalEventHandlersEventMap>(
-      target: EventTarget,
-      events: K[],
-      listener: (event: GlobalEventHandlersEventMap[K]) => void,
-      options?: boolean | AddEventListenerOptions
-    ) => any)
-  | ((
-      target: EventTarget,
-      events: string[],
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions
-    ) => any) = (target, events, handler, options): any => {
-  events.forEach((event) => on(target, event, handler, options));
-};
+export const on = <
+  M extends CustomEventMap = CustomEventMap,
+  K extends
+    | string
+    | ListenerKeys<GlobalEventHandlersEventMap>
+    | ListenerKeys<M> = string
+>(
+  target: EventTarget,
+  event: K,
+  listener: Listener<M, K>,
+  options: ListenerOptions = {}
+): void =>
+  target.addEventListener(event as string, listener as EventListener, options);
+
+export const once = <
+  M extends CustomEventMap = CustomEventMap,
+  K extends
+    | string
+    | ListenerKeys<GlobalEventHandlersEventMap>
+    | ListenerKeys<M> = string
+>(
+  target: EventTarget,
+  event: K,
+  listener: Listener<M, K>,
+  options: ListenerOptions = {}
+): void =>
+  on<M, K>(target, event, listener, {
+    ...(typeof options === 'boolean' ? { capture: options } : options),
+    once: true,
+  });
+
+export const onEach = <
+  M extends CustomEventMap = CustomEventMap,
+  K extends
+    | string
+    | ListenerKeys<GlobalEventHandlersEventMap>
+    | ListenerKeys<M> = string
+>(
+  target: EventTarget,
+  events: K[],
+  listener: Listener<M, K>,
+  options: ListenerOptions = {}
+): void =>
+  events.forEach((event) => on<M, K>(target, event, listener, options));
+
+export const removeClass = (element: HTMLElement, ...classes: string[]) =>
+  element.classList.remove(...classes);
 
 export const s = <T extends HTMLElement = HTMLElement>(html: string): T => {
   const container = document.createElement('div');
@@ -113,10 +149,6 @@ export const s = <T extends HTMLElement = HTMLElement>(html: string): T => {
 };
 
 export const t = (content: string): Text => document.createTextNode(content);
-
-type CustomEventMap = {
-  [key: string]: any[];
-};
 
 export class Element<
   T extends HTMLElement = HTMLElement,
@@ -143,7 +175,7 @@ export class Element<
   }
 
   addClass(...classes: string[]): void {
-    this.element().classList.add(...classes);
+    addClass(this.element(), ...classes);
   }
 
   append(...nodes: (Node | Element)[]): void {
@@ -164,76 +196,65 @@ export class Element<
     return emit(this.element(), event);
   }
 
-  emitCustom<T extends any[] = any[]>(
-    eventName: string,
-    ...params: T
+  emitCustom<K extends string | keyof M>(
+    eventName: K,
+    ...params: M[K]
   ): boolean {
-    return emitCustom<T>(this.element(), eventName, ...params);
+    return emitCustom<M[K]>(this.element(), eventName as string, ...params);
   }
 
   empty(): void {
     empty(this.element());
   }
 
-  on<K extends keyof GlobalEventHandlersEventMap>(
-    event: K,
-    listener: (event: GlobalEventHandlersEventMap[K]) => void,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  on<K extends keyof M>(
-    event: K,
-    listener: (event: CustomEvent<M[K]>) => void,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  on(
-    event: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  on(event, handler, options): void {
-    on(this.element(), event, handler, options);
+  hasClass(className: string): boolean {
+    return hasClass(this.element(), className);
   }
 
-  once<K extends keyof GlobalEventHandlersEventMap>(
-    event: K,
-    listener: (event: GlobalEventHandlersEventMap[K]) => void,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  once<K extends keyof M>(
-    event: K,
-    listener: (event: CustomEvent<M[K]>) => void,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  once(
-    event: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  once(event, handler, options): void {
-    once(this.element(), event, handler, options);
+  on<
+    K extends string =
+      | ListenerKeys<GlobalEventHandlersEventMap>
+      | ListenerKeys<M>
+  >(event: K, listener: Listener<M, K>, options: ListenerOptions = {}): void {
+    on<M, K>(this.element(), event, listener, options);
   }
 
-  onEach<K extends keyof GlobalEventHandlersEventMap>(
+  off<
+    K extends string =
+      | ListenerKeys<GlobalEventHandlersEventMap>
+      | ListenerKeys<M>
+  >(event: K, listener: Listener<M, K>, options: ListenerOptions = {}): void {
+    off<M, K>(this.element(), event, listener, options);
+  }
+
+  once<K extends string = ListenerKeys<GlobalEventHandlersEventMap & M>>(
+    event: K,
+    listener: Listener<M, K>,
+    options: ListenerOptions = {}
+  ): void {
+    once<M, K>(this.element(), event, listener, options);
+  }
+
+  onEach<K extends string = ListenerKeys<GlobalEventHandlersEventMap & M>>(
     events: K[],
-    listener: (event: GlobalEventHandlersEventMap[K]) => void,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  onEach<K extends keyof M>(
-    events: K[],
-    listener: (event: CustomEvent<M[K]>) => void,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  onEach(
-    events: string[],
-    listener: EventListenerOrEventListenerObject,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  onEach(events, handler, options): void {
-    onEach(this.element(), events, handler, options);
+    listener: Listener<M, K>,
+    options: ListenerOptions = {}
+  ): void {
+    onEach<M, K>(this.element(), events, listener, options);
+  }
+
+  query<T extends HTMLElement = HTMLElement>(selector: string): T | null {
+    return this.element().querySelector<T>(selector);
+  }
+
+  queryAll<T extends HTMLElement = HTMLElement>(
+    selector: string
+  ): NodeListOf<T> {
+    return this.element().querySelectorAll<T>(selector);
   }
 
   removeClass(...classes: string[]): void {
-    this.element().classList.remove(...classes);
+    removeClass(this.element(), ...classes);
   }
 }
 
