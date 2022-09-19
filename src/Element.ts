@@ -1,5 +1,3 @@
-import { parse } from 'css-what';
-
 export type CustomEventMap = {
   [key: string]: any[];
 };
@@ -36,39 +34,6 @@ export const empty = (element: HTMLElement): void => {
   while (element.hasChildNodes()) {
     element.firstChild?.remove();
   }
-};
-
-export const h = <T extends HTMLElement = HTMLElement>(
-  selector: string,
-  ...childNodes: (Node | Element)[]
-): T => {
-  const [element] = parse(selector).map((selectors) =>
-    selectors.reduce((element: HTMLElement, details) => {
-      if (details.type === 'tag') {
-        return document.createElement(details.name);
-      }
-
-      if (details.type === 'attribute' && details.name !== 'class') {
-        element.setAttribute(details.name, details.value ?? '');
-      }
-
-      if (details.type === 'attribute' && details.name === 'class') {
-        element.classList.add(details.value);
-      }
-
-      return element;
-    }, document.createElement('div'))
-  );
-
-  childNodes.forEach((childNode) => {
-    if (childNode instanceof Element) {
-      childNode = childNode.element();
-    }
-
-    element.append(childNode);
-  });
-
-  return element as T;
 };
 
 export const hasClass = (element: HTMLElement, className: string): boolean =>
@@ -158,13 +123,6 @@ export class Element<
 
   constructor(element: T) {
     this.#element = element;
-  }
-
-  static fromSelector<
-    T extends HTMLElement = HTMLElement,
-    M extends CustomEventMap = CustomEventMap
-  >(selector: string, ...childNodes: Node[]): Element<T, M> {
-    return new Element(h(selector, ...childNodes));
   }
 
   static fromString<
