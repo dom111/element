@@ -71,6 +71,20 @@ export const on = <
 ): void =>
   target.addEventListener(event as string, listener as EventListener, options);
 
+export const onEach = <
+  M extends CustomEventMap = CustomEventMap,
+  K extends
+    | string
+    | ListenerKeys<GlobalEventHandlersEventMap>
+    | ListenerKeys<M> = string
+>(
+  target: EventTarget,
+  events: K[],
+  listener: Listener<M, K>,
+  options: ListenerOptions = {}
+): void =>
+  events.forEach((event) => on<M, K>(target, event, listener, options));
+
 export const once = <
   M extends CustomEventMap = CustomEventMap,
   K extends
@@ -88,32 +102,42 @@ export const once = <
     once: true,
   });
 
-export const onEach = <
-  M extends CustomEventMap = CustomEventMap,
-  K extends
-    | string
-    | ListenerKeys<GlobalEventHandlersEventMap>
-    | ListenerKeys<M> = string
->(
-  target: EventTarget,
-  events: K[],
-  listener: Listener<M, K>,
-  options: ListenerOptions = {}
-): void =>
-  events.forEach((event) => on<M, K>(target, event, listener, options));
-
 export const removeClass = (element: HTMLElement, ...classes: string[]) =>
   element.classList.remove(...classes);
 
-export const s = <T extends HTMLElement = HTMLElement>(html: string): T => {
+export const s = <T extends HTMLElement = HTMLElement>(
+  html: string,
+  ...childNodes: (string | Node | Element)[]
+): T => {
   const container = document.createElement('div');
 
   container.innerHTML = html;
 
-  return container.firstElementChild as T;
+  const element = container.firstElementChild as T;
+
+  childNodes.forEach((childNode) => {
+    if (childNode instanceof Element) {
+      element.append(childNode.element());
+
+      return;
+    }
+
+    if (childNode instanceof Node) {
+      element.append(childNode);
+
+      return;
+    }
+
+    element.append(t(childNode));
+  });
+
+  return element;
 };
 
 export const t = (content: string): Text => document.createTextNode(content);
+
+export const toggleClass = (element: HTMLElement, ...classes: string[]) =>
+  classes.forEach((className) => element.classList.toggle(className));
 
 export class Element<
   T extends HTMLElement = HTMLElement,
@@ -169,14 +193,6 @@ export class Element<
     return hasClass(this.element(), className);
   }
 
-  on<
-    K extends string =
-      | ListenerKeys<GlobalEventHandlersEventMap>
-      | ListenerKeys<M>
-  >(event: K, listener: Listener<M, K>, options: ListenerOptions = {}): void {
-    on<M, K>(this.element(), event, listener, options);
-  }
-
   off<
     K extends string =
       | ListenerKeys<GlobalEventHandlersEventMap>
@@ -185,12 +201,12 @@ export class Element<
     off<M, K>(this.element(), event, listener, options);
   }
 
-  once<K extends string = ListenerKeys<GlobalEventHandlersEventMap & M>>(
-    event: K,
-    listener: Listener<M, K>,
-    options: ListenerOptions = {}
-  ): void {
-    once<M, K>(this.element(), event, listener, options);
+  on<
+    K extends string =
+      | ListenerKeys<GlobalEventHandlersEventMap>
+      | ListenerKeys<M>
+  >(event: K, listener: Listener<M, K>, options: ListenerOptions = {}): void {
+    on<M, K>(this.element(), event, listener, options);
   }
 
   onEach<K extends string = ListenerKeys<GlobalEventHandlersEventMap & M>>(
@@ -199,6 +215,14 @@ export class Element<
     options: ListenerOptions = {}
   ): void {
     onEach<M, K>(this.element(), events, listener, options);
+  }
+
+  once<K extends string = ListenerKeys<GlobalEventHandlersEventMap & M>>(
+    event: K,
+    listener: Listener<M, K>,
+    options: ListenerOptions = {}
+  ): void {
+    once<M, K>(this.element(), event, listener, options);
   }
 
   query<T extends HTMLElement = HTMLElement>(selector: string): T | null {
@@ -211,8 +235,16 @@ export class Element<
     return this.element().querySelectorAll<T>(selector);
   }
 
+  remove(): void {
+    this.element().remove();
+  }
+
   removeClass(...classes: string[]): void {
     removeClass(this.element(), ...classes);
+  }
+
+  toggleClass(...classes: string[]): void {
+    toggleClass(this.element(), ...classes);
   }
 }
 

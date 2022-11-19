@@ -2,7 +2,8 @@ import Element from '../../src/Element';
 
 describe('Example', () => {
   describe('property', () => {
-    test.todo('TODO', async () => {
+    test.todo('TODO');
+    async () => {
       const element = Element.fromString<
         HTMLDivElement,
         {
@@ -19,6 +20,6 @@ describe('Example', () => {
       element.on('keydown', (event) => {
         event.key;
       });
-    });
+    };
   });
 });
